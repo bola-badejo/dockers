@@ -1,0 +1,416 @@
+# ------------------ Install Docker -----------------
+
+# Ubuntu/Debian
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# macOS / Windows
+# Install Docker Desktop: https://www.docker.com/products/docker-desktop
+
+# Verify
+docker --version
+docker compose version
+git --version
+
+#------------------ Docker Login -----------------
+
+docker login
+# or private registry
+docker login registry.example.com
+
+# Clone repo
+
+git clone https://github.com/your-org/your-repo.git
+cd your-repo
+
+# If you don't have a repo yet, init one
+git init
+git add .
+git commit -m "initial commit"
+git remote add origin https://github.com/your-org/your-repo.git
+git push -u origin main
+
+# Copy example env (if present)
+cp .env.example .env
+
+# Edit
+nano .env
+
+# Build an image
+docker build -t <name>:<tag> .
+
+# Build with a specific Dockerfile
+docker build -f Dockerfile.prod -t <name>:<tag> .
+
+# Build multi-stage up to a target
+docker build --target build -t <name>:build .
+
+# Run a container
+docker run -d --name <container> -p 8080:8080 <name>:<tag>
+
+# Run with env file
+docker run -d --env-file .env -p 8080:8080 <name>:<tag>
+
+# Logs, exec, stop, remove
+docker logs -f <container>
+docker exec -it <container> sh
+docker stop <container>
+docker rm <container>
+
+# List
+docker images
+docker ps -a
+docker system df
+
+# Cleanup
+docker image prune -a
+docker system prune -af --volumes
+
+#------- flutter -------
+
+# Build
+docker build -t my-flutter-web:latest .
+
+# Run
+docker run -d --name flutter-web -p 8080:80 my-flutter-web:latest
+
+# Open
+open http://localhost:8080   # macOS
+xdg-open http://localhost:8080  # Linux
+
+# Tag & push
+docker tag my-flutter-web:latest youruser/my-flutter-web:1.0.0
+docker push youruser/my-flutter-web:1.0.0
+
+# Stop & cleanup
+docker stop flutter-web && docker rm flutter-web
+
+# ----- h-flutter -----
+docker build -t my-flutter-dev:latest -f Dockerfile.dev .
+docker run -d --name flutter-dev -p 8080:8080 -v $(pwd):/app my-flutter-dev:latest
+docker exec -it flutter-dev flutter devices
+docker exec -it flutter-dev flutter run -d web-server --web-port=8080 --web-hostname=0.0.0.0
+
+# ----- react -----
+
+docker build -t my-react-app:latest .
+docker run -d --name react-app -p 3000:80 my-react-app:latest
+open http://localhost:3000
+
+# Push
+docker tag my-react-app:latest youruser/my-react-app:1.0.0
+docker push youruser/my-react-app:1.0.0
+
+# Vite
+docker build -t my-react-dev:latest -f Dockerfile.dev .
+docker run -it --rm -p 5173:5173 -v $(pwd):/app -v /app/node_modules my-react-dev:latest
+
+# CRA
+docker run -it --rm -p 3000:3000 -v $(pwd):/app -v /app/node_modules my-react-dev:latest
+
+
+# ----- node -----
+
+docker build -t my-node-api:latest --target runtime .
+docker run -d --name node-api -p 3000:3000 --env-file .env my-node-api:latest
+docker logs -f node-api
+
+# Push
+docker tag my-node-api:latest youruser/my-node-api:1.0.0
+docker push youruser/my-node-api:1.0.0
+
+# ----- node dev ---  --
+
+docker build -t my-node-dev:latest -f Dockerfile.dev .
+docker run -it --rm \
+  -p 3000:3000 -p 9229:9229 \
+  -v $(pwd):/app -v /app/node_modules \
+  --env-file .env \
+  my-node-dev:latest
+
+# ----- react-native -----
+
+docker build -t rn-builder:latest .
+docker run --rm -v $(pwd)/out:/apk rn-builder:latest
+ls -la out/
+
+# ----- react-native dev -----
+
+docker build -t rn-dev:latest -f Dockerfile.dev .
+docker run -it --rm -p 8081:8081 -v $(pwd):/app rn-dev:latest
+
+# In a separate terminal, connect an Android device or run:
+docker exec -it <container_id> npx react-native run-android
+
+# ----- python for fastAPI and flask-----
+
+docker build -t my-python-api:latest .
+docker run -d --name py-api -p 8000:8000 --env-file .env my-python-api:latest
+docker logs -f py-api
+
+# Push
+docker tag my-python-api:latest youruser/my-python-api:1.0.0
+docker push youruser/my-python-api:1.0.0
+
+# ----- python dev -----
+
+docker run -it --rm \
+  -p 8000:8000 \
+  -v $(pwd):/app \
+  my-python-api:latest \
+  uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# ---- django ----
+
+# Build
+docker build -t my-django:latest .
+
+# Run migrations + server
+docker run -d --name django -p 8000:8000 --env-file .env my-django:latest
+docker exec -it django python manage.py migrate
+docker exec -it django python manage.py createsuperuser
+docker exec -it django python manage.py collectstatic --noinput
+
+
+
+Spring Boot — Commands
+Build & Run (Production)
+bash
+docker build -t my-spring-app:latest .
+docker run -d --name spring-app -p 8080:8080 --env-file .env my-spring-app:latest
+docker logs -f spring-app
+
+# Push
+docker tag my-spring-app:latest youruser/my-spring-app:1.0.0
+docker push youruser/my-spring-app:1.0.0
+Development (JDWP debug on 5005)
+bash
+docker build -t my-spring-dev:latest -f Dockerfile.dev .
+docker run -it --rm \
+  -p 8080:8080 -p 5005:5005 \
+  -v $(pwd):/app -v ~/.m2:/root/.m2 \
+  my-spring-dev:latest
+Local Maven
+bash
+# Build jar
+./mvnw clean package -DskipTests
+
+# Run
+java -jar target/*.jar
+
+# Dev run
+./mvnw spring-boot:run
+
+# Test
+./mvnw test
+Gradle variant
+
+
+./gradlew clean build -x test
+java -jar build/libs/*.jar
+10. Docker Compose (Full Stacks)
+Node + Mongo + React
+bash
+docker compose up -d --build
+docker compose logs -f
+docker compose ps
+docker compose down
+docker compose down -v      # also delete volumes
+Spring Boot + Postgres + React
+
+
+# .env with DB creds
+
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose exec db psql -U postgres -d appdb
+Python + Redis + Celery
+bash
+docker compose up -d --build
+docker compose exec api celery -A worker inspect active
+
+
+#--- Multi-Arch Builds (AMD64 + ARM64) -----
+
+# Enable buildx
+docker buildx create --name multiarch --use
+docker buildx inspect --bootstrap
+
+# --- Build & push both platforms ----
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t youruser/my-app:1.0.0 \
+  --push .
+
+# ----Registry & Image Management-----
+
+# Tag
+docker tag my-app:latest youruser/my-app:1.0.0
+docker tag my-app:latest youruser/my-app:latest
+
+# Push
+docker push youruser/my-app:1.0.0
+docker push youruser/my-app:latest
+
+# Pull
+docker pull youruser/my-app:1.0.0
+
+# Inspect
+docker image inspect youruser/my-app:1.0.0
+docker history youruser/my-app:1.0.0
+
+# Save / Load (air-gapped)
+docker save youruser/my-app:1.0.0 | gzip > app.tar.gz
+docker load < app.tar.gz
+
+# Scan for vulnerabilities
+docker scout cves youruser/my-app:1.0.0
+# ---- Useful Debug Commands -----
+
+# Enter running container
+docker exec -it <container> sh
+docker exec -it <container> bash
+
+# Open a fresh container for debugging
+docker run --rm -it --entrypoint sh yourimage:tag
+
+# View resource usage
+docker stats
+
+# Inspect network
+docker network ls
+docker network inspect <network>
+
+# Copy files in/out
+docker cp ./file.txt <container>:/app/
+docker cp <container>:/app/log.txt ./
+
+# Check port mappings
+docker port <container>
+
+# Get container IP
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <container>
+14. Kubernetes (Optional Deployment)
+bash
+# Build & push image first
+docker buildx build --platform linux/amd64 -t youruser/my-app:1.0.0 --push .
+
+# Apply manifests
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+# Watch rollout
+kubectl rollout status deployment/my-app
+kubectl get pods -w
+kubectl logs -f deploy/my-app
+
+# Update image
+kubectl set image deployment/my-app app=youruser/my-app:1.0.1
+kubectl rollout undo deployment/my-app
+
+
+# CI/CD — GitHub Actions Example
+# .github/workflows/deploy.yml
+
+
+name: Build & Push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            youruser/my-app:latest
+            youruser/my-app:${{ github.sha }}
+
+
+# --Full "Zero to Running" Cheat Sequence
+
+# 1. Clone
+git clone https://github.com/your-org/your-repo.git && cd your-repo
+
+# 2. Configure
+cp .env.example .env && nano .env
+
+# 3. Build image
+docker build -t my-app:latest .
+
+# 4. Run container
+docker run -d --name my-app \
+  --env-file .env \
+  -p 8080:8080 \
+  --restart unless-stopped \
+  my-app:latest
+
+# 5. Verify
+docker logs -f my-app
+curl http://localhost:8080/health
+
+# 6. Tag & push
+docker tag my-app:latest youruser/my-app:1.0.0
+docker push youruser/my-app:1.0.0
+
+# 7. Deploy (server side)
+ssh user@prod-server
+docker pull youruser/my-app:1.0.0
+docker stop my-app && docker rm my-app
+docker run -d --name my-app --env-file .env -p 80:8080 youruser/my-app:1.0.0
+
+# One-Command Shortcuts (Makefile)
+# Save as Makefile at project root:
+
+
+IMAGE ?= my-app
+TAG   ?= latest
+PORT  ?= 8080
+
+build:
+	docker build -t $(IMAGE):$(TAG) .
+
+run:
+	docker run -d --name $(IMAGE) --env-file .env -p $(PORT):$(PORT) $(IMAGE):$(TAG)
+
+logs:
+	docker logs -f $(IMAGE)
+
+stop:
+	docker stop $(IMAGE) && docker rm $(IMAGE)
+
+push:
+	docker tag $(IMAGE):$(TAG) youruser/$(IMAGE):$(TAG)
+	docker push youruser/$(IMAGE):$(TAG)
+
+rebuild: stop build run
+
+up:
+	docker compose up -d --build
+
+down:
+	docker compose down -v
+  
+
+make build
+make run
+make logs
+make push
+Want me to generate a specific full workflow for one stack (e.g., "Spring Boot + Postgres + React on AWS ECS"), including the exact docker-compose.prod.yml, GitHub Actions, and cloud CLI commands?
+

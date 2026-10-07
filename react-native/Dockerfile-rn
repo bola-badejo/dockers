@@ -1,0 +1,13 @@
+FROM reactnativecommunity/react-native-android:latest AS build
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN cd android && ./gradlew assembleRelease
+
+# Output Stage
+FROM alpine:3.20
+WORKDIR /apk
+COPY --from=build /app/android/app/build/outputs/apk/release/*.apk ./
+CMD ["ls", "-la", "/apk"]

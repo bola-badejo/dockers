@@ -1,0 +1,30 @@
+# running build
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+COPY src ./src
+RUN mvn -B clean package -DskipTests
+
+# Extracting layers applicable to Spring Boot 3.+
+FROM eclipse-temurin:21-jre-alpine AS extractor
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract
+
+# executing runtime 
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring
+
+COPY --from=extractor /app/dependencies/ ./
+COPY --from=extractor /app/spring-boot-loader/ ./
+COPY --from=extractor /app/snapshot-dependencies/ ./
+COPY --from=extractor /app/application/ ./
+
+EXPOSE 8080
+ENTRYPOINT ["java", \
+  "-XX:MaxRAMPercentage=75", \
+  "-XX:+UseG1GC", \
+  "org.springframework.boot.loader.launch.JarLauncher"]
