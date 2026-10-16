@@ -1,0 +1,188 @@
+# Today's MO.
+# verify Docker works
+docker --version
+docker ps
+docker images
+
+#Confirm the image exists
+
+docker images
+
+
+# Figure out which port to expose
+what port does your app listen on inside the container?
+
+· Flask → 5000
+· FastAPI/uvicorn → 8000
+· Django → 8000
+· Node/Express → 3000
+· React dev server → 3000 or 5173
+· Spring Boot → 8080
+· Streamlit → 8501
+
+Step 3: Run the container
+
+# Pattern:  -p HOST_PORT:CONTAINER_PORT
+
+docker run -d --name myapp -p 8000:8000 app:v1.0
+
+docker run -d --name myapp -p 8000:8000 --env-file .env app:v1.0
+
+
+Step 4: Verify it's running
+
+docker ps
+docker logs myapp
+
+
+Step 5: Open in browser
+
+· Flask → http://localhost:5000
+· FastAPI → http://localhost:8000/docs
+· Node → http://localhost:3000
+· Spring → http://localhost:8080
+
+
+# Useful lifecycle commands
+
+
+docker stop myapp            # stop
+docker start myapp           # restart
+docker restart myapp         # bounce
+docker rm myapp              # remove (must stop first)
+docker rm -f myapp           # force remove
+
+
+
+
+Part 2 — Share Your Image
+
+Pick one of two methods:
+
+Method A — Offline (tar file) — easiest for classroom
+
+# Save image to a tar file
+docker save app:v1.0 -o app-v1.0.tar
+
+# Compress (recommended if >200 MB)
+gzip app-v1.0.tar
+# → produces app-v1.0.tar.gz
+
+
+Share the file via:
+
+· USB drive
+· Google Drive / OneDrive / WeTransfer
+· Slack / WhatsApp / Teams
+· Copy to a shared network folder
+
+The recipient loads it:
+
+# If .tar
+docker load -i app-v1.0.tar
+
+# If .tar.gz
+docker load -i app-v1.0.tar.gz
+# or
+gunzip -c app-v1.0.tar.gz | docker load
+
+
+Verify:
+
+docker images | grep app
+
+
+Method B — Docker Hub (online, proper way)
+
+# 1. Create account at https://hub.docker.com (free)
+
+# 2. Login
+docker login
+# username: <their-dockerhub-username>
+# password: <their-password or access token>
+
+# 3. Tag the image with their namespace
+#    Replace 'studentname' with their Docker Hub username
+docker tag app:v1.0 studentname/app:v1.0
+docker tag app:v1.0 studentname/app:latest
+
+# 4. Push
+docker push studentname/app:v1.0
+docker push studentname/app:latest
+
+# 5. Verify on https://hub.docker.com/u/studentname
+
+
+Anyone can now pull:
+
+
+docker pull studentname/app:v1.0
+docker run -d --name their-app -p 8001:8000 studentname/app:v1.0
+
+
+Part 3 — Run a Classmate's Image
+# If from tar file
+docker load -i classmate-app.tar
+
+# If from Docker Hub
+docker pull classmate-username/app:v1.0
+
+# Run it (note: use a DIFFERENT host port to avoid conflicts)
+docker run -d --name their-app -p 8001:8000 classmate-username/app:v1.0
+
+# Open browser
+# http://localhost:8001
+
+
+
+
+
+# Build & push your image
+
+docker build -t YOUR_DOCKERHUB_USERNAME/react-app:v1 .
+docker push YOUR_DOCKERHUB_USERNAME/react-app:v1
+
+# 2. Apply the manifests
+
+kubectl apply -f k8s/
+
+# 3. Verify
+
+kubectl get pods
+kubectl get svc
+kubectl get ingress
+
+# 4. Access the app
+Via Ingress:
+
+http://react-app.local
+Via port-forward (quick test):
+
+kubectl port-forward svc/react-app 8080:80
+
+# open http://localhost:8080
+
+🧪 Verify the SPA Routing Works
+This is the most common gotcha for React apps. Test it:
+
+# Should return index.html (SPA fallback)
+curl -I http://localhost:8080/some/deep/route
+
+# Should return HTTP 200, not 404
+Your nginx.conf already handles this with try_files $uri $uri/ /index.html; ✅
+
+🔄 Updating Your App
+When you change the React code:
+
+bash
+docker build -t YOUR_DOCKERHUB_USERNAME/react-app:v2 .
+docker push YOUR_DOCKERHUB_USERNAME/react-app:v2
+
+# edit deployment.yaml image tag to :v2
+kubectl apply -f k8s/deployment.yaml
+kubectl rollout status deployment react-app
+Kubernetes performs a rolling update — old Pods are replaced gradually, no downtime.
+
+Rollback if needed:
+
+kubectl rollout undo deployment react-app
